@@ -1,0 +1,66 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+WEBHOOKS_PATH = "/opt/cd-webhooks"
+REPOSITORY_PATH = File.join(Dir.home, "Repositories", "cd-webhooks-test")
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.synced_folder "#{REPOSITORY_PATH}", "#{WEBHOOKS_PATH}",
+    :disabled       => false,
+    :type           => "rsync",
+    :rsync__auto    => true
+
+  config.vm.network :private_network, ip: "10.107.56.116"
+  config.vm.network "public_network", bridge: 'en0: Wi-Fi (AirPort)'
+
+  config.ssh.insert_key = 'true'
+  config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+
+ 
+  #  Set the time zone 
+  config.vm.provision :shell, :inline => "sudo rm /etc/localtime && sudo ln -s /usr/share/zoneinfo/Etc/GMT+7 /etc/localtime" 
+  config.vm.provider "virtualbox" do |v|
+    v.memory = 4096
+    v.cpus = 2
+    v.name = "cd-webhooks"
+    v.customize ['guestproperty', 'set', :id, '/VirtualBox/GuestAdd/VBoxService/--timesync-set-threshold', '10000']
+  end
+
+  $script = <<SCRIPT
+
+apt-get install -y python python-pip ntp
+pip install -U pip setuptools virtualenv kubernetes flask
+ROOT_PATH=/opt/cd-webhooks/src
+
+
+SCRIPT
+
+# First, install python
+  config.vm.provision "shell" do |s|
+    s.inline = $script
+  end
+ 
+  #  Run the ansible script to install elasticbox
+  #config.vm.provision "ansible" do |ansible|
+  #  ansible.playbook = "elasticbox.yml"
+  #end
+  
+end
+
+# tesseract text below generated with http://patorjk.com/software/taag/#p=display&f=Big&t=tesseract
+# You need to make sure that all \ are escaped as \\
+puts "
+ _________ ________             __      __      ___.   .__                   __            
+\\_   ___ \\\\______ \\           /  \\    /  \\ ____\\_ |__ |  |__   ____   ____ |  | __  ______
+/    \\  \\/ |    |  \\   ______ \\   \\/\\/   // __ \\| __ \|  |  \\ /  _ \\ /  _ \\|  |/ / /  ___/
+\\     \\____|    `   \\ /_____/  \\        /\\  ___/| \\_\\ \\   Y  (  <_> |  <_> )    <  \\___ \\ 
+ \\______  /_______  /           \\__/\\  /  \\___  >___  /___|  /\\____/ \\____/|__|_ \\/____  >
+        \\/        \\/                 \\/       \\/    \\/     \\/                   \\/     \\/ 
+
+ To automatically sync changes with the VM use 'vagrant rsync-auto'
+
+"
